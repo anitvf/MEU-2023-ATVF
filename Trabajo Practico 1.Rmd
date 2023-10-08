@@ -1,0 +1,125 @@
+---
+title: "Trabajo Practico 1"
+author: "Ana Vargas Frutos"
+date: "Septiembre, 2023"
+output: html_document
+---
+
+### Trabajo Práctico 1 - Instrumentos de análisis de datos II
+
+```{r}
+library(tidyverse)
+library (lubridate)
+```
+ 
+1) Crear un repositorio público en la cuenta personal de Github
+
+2) Crear un proyecto en la computadora desde RStudio y vincular al repositorio de Github
+
+3) Crear un **script.R** / **Rmarkdown**  guardarlo en el proyecto
+
+4) Importar una base de datos 
+Se carga la base de da
+```{r}
+accidentes_Paris <- read.csv2("accidentologie0.csv", sep = ";",  header =TRUE)
+```
+Exploramos la estructura y los estadísticos de las variables contenidas:
+ 
+```{r}
+dim(accidentes_Paris)
+```
+```{r}
+summary(accidentes_Paris)
+```
+```{r}
+str(accidentes_Paris)
+```
+ 
+```{r}
+names(accidentes_Paris)
+```
+ La base de datos contiene 35760 observaciones y 25 variables, y consiste en el registro de datos de accidentes viales en la ciudad de Paris, en el cual se tienen los datos sobre el tipo de accidente, la fecha, tipo de accidente, tipo de víctima y sus características, las coordenadas y el distrito. 
+ 
+
+5) Sobre esta base, plantearse una pregunta sencilla (ejemplo: "Cuál es el promedio de x en el año z" 
+
+  - `filter()` (seleccionar universe de análisis -filas-)
+  - `select()` (seleccionar variables de interés -columnas-)
+  - `mutate()` (recodificar / limpiar / armar indicadores)
+  - `pivot_longer()` / `pivot_vider()` (re-estructurar la base -sólo si es necesario-)
+
+Los datos de fecha, tienen la siguiente estructura: 
+
+```{r}
+class(accidentes_Paris$Date)
+```
+ Consiste en una variable característica la cual deberá ser transformada para poder seleccionar los datos por año, mes y día. Para ello, modicamos la tipología de la variable y luego creamos nuevas variables que reflejen el año, mes y tipo de día. 
+ 
+```{r}
+accidentes_Paris<- accidentes_Paris %>%
+  mutate(Date=ymd(Date))
+```
+Verifcamos el cambio: 
+
+```{r}
+class(accidentes_Paris$Date)
+```
+Y creamos las otras variables de fecha: 
+
+```{r}
+accidentes_Paris <- accidentes_Paris %>%
+  mutate(month=month(Date, label=TRUE),
+         year=year(Date),
+         day=wday(Date, label=TRUE, abbr=FALSE))
+```
+
+Observamos los años que están contenidos en la base de datos: 
+
+```{r}
+unique(accidentes_Paris$year)
+```
+
+Y observamos que la base de datos contiene datos desde el año 2017 al año 2022. Seleccionamos trabajar con los datos de los años 2019, 2020 y 2021. Aprovechamos para seleccionar variables elimanado algunas columnas y renombrandos otras:
+
+```{r}
+accidentes_Paris_19_21 <- accidentes_Paris %>% 
+  filter(year==c("2019","2020","2021")) %>%
+  select(IdUsager,Date,Mode,Catégorie, Gravité, Genre,Arrondissement.1,Longitude,Latitude, Id.accident, month,year,day) %>% 
+  rename(name_Arrond =Arrondissement.1, 
+         Modo = Mode)
+```
+
+```{r}
+accidentes_Paris_19_21_Modo <- accidentes_Paris_19_21 %>% 
+  group_by(name_Arrond, Modo ) %>% 
+  summarise(Cantidad=n()) 
+```
+
+```{r}
+accidentes_Paris_19_21_Modo_2 <- accidentes_Paris_19_21_Modo %>% 
+  pivot_wider(names_from = Modo, values_from = Cantidad)%>%
+  mutate(across(.cols=c("2 Roues Motorisées", "4 Roues","EDP-m","Piéton", "Vélo","Autres"), 
+                ~replace_na(., 0)))
+```
+
+Luego de las transformaciones realizadas, podemos ver la cantidad de accidentes registrados entre los años 2019 y 2020, en cada distrito y diferenciado por modo de accidente. 
+
+```{r}
+accidentes_Paris_prom <- accidentes_Paris_19_21_Modo %>% 
+  group_by(Modo) %>%
+  summarise(mean_modo= round(mean(Cantidad),digits = 2))
+```
+ Y así obtenemos el promedio de cada accidente en Paris, de acuerdo al tipo de accidente. 
+
+6) Al finalizar, guardar el script.R / rmarkdown.Rmd y subir los cambios en el proyecto _local_ al repositorio _remoto_ de Github.
+
+  - Recordar la secuencia (por terminal o por la pestaña _GIT_ del panel de control de Rstudio):
+  
+    - `git pull`
+    - `git add -A`
+    - `git commit -m "acá el mensaje"`
+    - `git push`
+    
+7) Entrega: Una vez realizado los puntos anteriores, copiar el link del repositorio en la columna **TP 1**: (https://docs.google.com/spreadsheets/d/1zs4iAFX6D0qZTse62nVPRreOXxhb17DaPr2H5Qzc1is/edit#gid=0).
+
+
